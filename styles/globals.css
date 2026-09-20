@@ -4,6 +4,63 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-	--font-sans: "font", sans-serif;
-	--font-mono: "monospace", monospace;
+  --font-sans: "font", sans-serif;
+  --font-mono: "monospace", monospace;
+}
+
+/* ============================================================
+   Exploratu Design System – Color Overrides v3
+   
+   Siguiendo exactamente el patrón de la documentación oficial:
+   https://heroui.com/docs/react/getting-started/colors
+   
+   "Override existing colors:"
+     :root { --accent: oklch(...); }
+     [data-theme="dark"] { --accent: oklch(...); }
+   
+   Conversiones hex → oklch  (via oklch.com):
+     #FAE121  →  oklch(0.893 0.178 95.66)
+     #FF2D46  →  oklch(0.597 0.231 20.12)
+     #FCFCFC  →  oklch(0.988 0 0)
+     #1E1E1E  →  oklch(0.145 0 0)
+   ============================================================ */
+
+/* Light theme overrides */
+:root {
+  --accent:            oklch(0.780 0.178 95.66);  /* #FAE121 levemente atenuado para light */
+  --accent-foreground: oklch(0.145 0 0);           /* texto oscuro sobre amarillo */
+
+  --danger:            oklch(0.597 0.231 20.12);  /* #FF2D46 */
+  --danger-foreground: oklch(0.988 0 0);           /* texto claro sobre rojo */
+
+  --background:        oklch(0.988 0 0);           /* #FCFCFC */
+  --foreground:        oklch(0.145 0 0);           /* #1E1E1E */
+}
+
+/* Dark theme overrides */
+.dark,
+[data-theme="dark"] {
+  --accent:            oklch(0.893 0.178 95.66);  /* #FAE121 */
+  --accent-foreground: oklch(0.145 0 0);           /* texto oscuro sobre amarillo */
+
+  --danger:            oklch(0.597 0.231 20.12);  /* #FF2D46 */
+  --danger-foreground: oklch(0.988 0 0);           /* texto claro sobre rojo */
+
+  --background:        oklch(0.145 0 0);           /* #1E1E1E */
+  --foreground:        oklch(0.988 0 0);           /* #FCFCFC */
+
+  --surface:           oklch(0.185 0.003 285.89);
+  --surface-secondary: oklch(0.215 0.003 285.89);
+  --surface-tertiary:  oklch(0.245 0.002 285.89);
+
+  --overlay:           oklch(0.200 0.004 285.89);
+
+  --field-background:  oklch(0.274 0.006 286.033);
+  --field-foreground:  oklch(0.988 0 0);
+
+  --border:            oklch(0.22 0.005 285.89);
+  --separator:         oklch(0.20 0.005 285.89);
+
+  --focus:             var(--accent);
+  --link:              oklch(0.988 0 0);
 }

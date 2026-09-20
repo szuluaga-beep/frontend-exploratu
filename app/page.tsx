@@ -1,13 +1,14 @@
 import { siteConfig } from "@/config/site";
 import { title, subtitle } from "@/components/primitives";
 import { GithubIcon } from "@/components/icons";
+import { Button } from "@heroui/react";
 
 export default function Home() {
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
       <div className="inline-block max-w-xl text-center justify-center">
         <span className={title()}>Make&nbsp;</span>
-        <span className={title({ color: "blue" })}>beautiful&nbsp;</span>
+        <span className={title({ color: "yellow" })}>beautiful&nbsp;</span>
         <br />
         <span className={title()}>
           websites regardless of your design experience.
@@ -18,14 +19,7 @@ export default function Home() {
       </div>
 
       <div className="flex gap-3">
-        <a
-          className="button button--primary button--md rounded-full"
-          href={siteConfig.links.docs}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Documentation
-        </a>
+       <Button>Hello</Button>
         <a
           className="button button--tertiary button--md rounded-full"
           href={siteConfig.links.github}
