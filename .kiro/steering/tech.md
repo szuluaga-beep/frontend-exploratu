@@ -11,6 +11,8 @@
 | Tailwind CSS | 4.1.11 | Utility-first CSS framework |
 | Tailwind Variants | 3.3.0 | Component style composition |
 | next-themes | 0.4.6 | Dark/light mode management |
+| @t3-oss/env-nextjs | 0.13.11 | Type-safe environment variable validation |
+| Zod | 4.6.5 | Schema validation library |
 
 ## Build System
 
@@ -54,10 +56,44 @@ pnpm lint            # Run ESLint with --fix (applies Prettier formatting)
 - pnpm for dependency management
 - Modern browser support (ES5 target with dynamic features)
 
+## Environment Variables
+
+Environment variables are validated using **@t3-oss/env-nextjs** and **Zod** at build time. This ensures:
+- Type-safe environment variable access
+- Compile-time validation
+- Separation of server and client variables
+- Prevention of accidental client exposure of server secrets
+
+Configuration is in `app/env.ts`. Define your schema there and import the `env` object throughout the app.
+
+Example:
+```typescript
+// app/env.ts
+import { createEnv } from "@t3-oss/env-nextjs";
+import * as z from "zod";
+
+export const env = createEnv({
+  server: {
+    DATABASE_URL: z.string().url(),
+  },
+  client: {
+    NEXT_PUBLIC_API_URL: z.string().url(),
+  },
+  experimental__runtimeEnv: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
+});
+
+// Usage in any file (server or client)
+import { env } from "@/app/env";
+const apiUrl = env.NEXT_PUBLIC_API_URL;
+```
+
 ## Import Path Alias
 
 The `@/*` alias is configured to resolve to the root directory, enabling clean imports:
 ```typescript
 import { siteConfig } from "@/config/site";
 import { Button } from "@heroui/react";
+import { env } from "@/app/env";
 ```
