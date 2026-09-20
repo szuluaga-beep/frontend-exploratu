@@ -42,7 +42,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-4">
           <NextLink className="flex items-center gap-1" href="/">
             <Logo />
-            <p className="font-bold text-inherit">ACME</p>
+            <p className="font-bold text-inherit">Exploratu</p>
           </NextLink>
           <ul className="hidden lg:flex gap-4 ml-2">
             {siteConfig.navItems.map((item) => (
