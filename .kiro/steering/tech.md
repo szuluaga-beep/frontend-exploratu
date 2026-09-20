@@ -13,6 +13,7 @@
 | next-themes | 0.4.6 | Dark/light mode management |
 | @t3-oss/env-nextjs | 0.13.11 | Type-safe environment variable validation |
 | Zod | 4.6.5 | Schema validation library |
+| Better Auth | latest | Authentication and authorization framework |
 
 ## Build System
 
@@ -33,6 +34,10 @@ pnpm start:prod      # Start production server
 
 # Code Quality
 pnpm lint            # Run ESLint with --fix (applies Prettier formatting)
+
+# Better Auth
+pnpm dlx auth@latest migrate    # Run database migrations for Better Auth
+pnpm dlx auth@latest generate   # Generate Better Auth type definitions
 ```
 
 ## Development Tools

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    container_name: frontend-exploratu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: exploratu
+    ports:
+      - "5433:5432"
+    volumes:
+      - exploratu-frontend:/var/lib/postgresql
+
+volumes:
+  exploratu-frontend:
