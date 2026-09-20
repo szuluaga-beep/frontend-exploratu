@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Create PR with Auto Title",
+      "trigger": "UserPromptSubmit",
+      "matcher": "create-pr",
+      "action": {
+        "type": "command",
+        "command": "powershell -Command \"\n# Get current branch\n\\$branch = git rev-parse --abbrev-ref HEAD\n\\$mainBranch = 'main'\n\n# Get commits not in main\n\\$commits = git log \\$mainBranch..\\$branch --pretty=format:'%s'\n\n# Get changed files\n\\$changedFiles = git diff --name-only \\$mainBranch..HEAD\n\n# Generate title from branch name and commits\n\\$branchTitle = \\$branch -replace '^(feat|fix|chore|docs|refactor|test)/', '' -replace '-', ' '\n\\$firstCommit = (\\$commits | Select-Object -First 1)\n\\$title = if (\\$firstCommit) { \\$firstCommit } else { 'Update: ' + \\$branchTitle }\n\n# Show summary\nWrite-Host '=== PR Info ===' -ForegroundColor Cyan\nWrite-Host \\\"Branch: \\$branch\\\" -ForegroundColor Green\nWrite-Host \\\"Title: \\$title\\\" -ForegroundColor Yellow\nWrite-Host \\\"Changed files: \\$(\\$changedFiles.Count)\\\" -ForegroundColor Green\nWrite-Host ''\nWrite-Host 'Creating PR...' -ForegroundColor Cyan\n\n# Create PR with template\ngh pr create --title \\\"\\$title\\\" --template .github/templates/pull-request.md --base \\$mainBranch\n\nif (\\$LASTEXITCODE -eq 0) {\n  Write-Host 'PR created successfully!' -ForegroundColor Green\n  exit 0\n} else {\n  Write-Host 'Error creating PR' -ForegroundColor Red\n  exit 1\n}\n\""
+      }
+    }
+  ]
+}
