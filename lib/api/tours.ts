@@ -26,5 +26,7 @@ export async function createTour(data: CreateTourInput, token: string): Promise<
   const api = createApiClient(token);
   const response = await api.post<Tour>("/api/tours", data);
 
+  
+
   return response.data;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
 import {
   Button,
   FieldError,
@@ -59,10 +60,33 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
 
       reset();
       state.close();
-    } catch {
-      setError("root.serverError", {
-        message: "No se pudo crear el tour. Intenta de nuevo.",
-      });
+    } catch (err) {
+      // Extract the real error message from the backend response
+      let message = "No se pudo crear el tour. Intenta de nuevo.";
+
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        // Backend may return { message: "..." } or { error: "..." }
+        const body = err.response?.data as
+          | { message?: string; error?: string }
+          | undefined;
+
+        const backendMsg = body?.message ?? body?.error;
+
+        if (backendMsg) {
+          message = backendMsg;
+        } else if (status === 401) {
+          message = "No tienes permiso para crear tours. Inicia sesión de nuevo.";
+        } else if (status === 400) {
+          message = "Los datos enviados son inválidos. Revisa el formulario.";
+        } else if (status === 422) {
+          message = "Error de validación en el servidor. Revisa los campos.";
+        } else if (status === 500) {
+          message = "Error interno del servidor. Intenta más tarde.";
+        }
+      }
+
+      setError("root.serverError", { message });
     }
   };
 
@@ -281,9 +305,11 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
 
                     {/* Server error */}
                     {errors.root?.serverError && (
-                      <p className="text-sm text-danger text-center rounded-lg bg-danger/10 px-3 py-2">
-                        {errors.root.serverError.message}
-                      </p>
+                      <div className="rounded-lg bg-danger/10 border border-danger/20 px-3 py-2">
+                        <p className="text-sm text-danger font-medium">
+                          ⚠️ {errors.root.serverError.message}
+                        </p>
+                      </div>
                     )}
                   </form>
                 </Modal.Body>

@@ -28,22 +28,25 @@ export function createApiClient(token?: string) {
     (error: unknown) => Promise.reject(error),
   );
 
-  // Response interceptor: centralized error handling
+  // Response interceptor: log errors centrally but always re-throw the
+  // original AxiosError so callers can inspect response.data and status
   instance.interceptors.response.use(
     (response) => response,
     (error: unknown) => {
       if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          console.warn("[API] Unauthorized (401) — token may be invalid or expired");
-          return Promise.reject(new Error("Unauthorized: Please log in to continue."));
-        }
+        const status = error.response?.status;
 
-        if (error.response?.status === 500) {
-          console.error("[API] Internal server error (500)");
-          return Promise.reject(new Error("Server error: Please try again later."));
+        if (status === 401) {
+          console.warn("[API] Unauthorized (401) — token may be invalid or expired");
+        } else if (status === 500) {
+          console.error("[API] Internal server error (500)", error.response?.data);
+        } else if (status != null) {
+          console.warn(`[API] Error ${status}`, error.response?.data);
         }
       }
 
+      // Always re-throw the original error so callers get the full AxiosError
+      // (including response.data with the backend message)
       return Promise.reject(error);
     },
   );
