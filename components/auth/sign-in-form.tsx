@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, FieldError, Input, Label, Spinner, TextField } from "@heroui/react";
 import NextLink from "next/link";
 import { Controller, useForm } from "react-hook-form";
 
-import { signIn, useSession } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
 import { signInSchema, type SignInInput } from "@/lib/schemas/sign-in.schema";
 
 export function SignInForm() {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -30,13 +31,6 @@ export function SignInForm() {
     },
   });
 
-  // Redirigir si ya tiene sesión activa
-  useEffect(() => {
-    if (!isPending && session) {
-      router.push("/dashboard");
-    }
-  }, [session, isPending, router]);
-
   const onSubmit = async (data: SignInInput) => {
     try {
       const result = await signIn.email({
@@ -48,10 +42,11 @@ export function SignInForm() {
         setError("root.serverError", {
           message: result.error.message ?? "Credenciales inválidas",
         });
+
         return;
       }
 
-      router.push("/dashboard");
+      router.push(callbackUrl);
     } catch {
       setError("root.serverError", {
         message: "Ocurrió un error inesperado. Intenta de nuevo.",
@@ -70,8 +65,8 @@ export function SignInForm() {
             name={field.name}
             type="email"
             value={field.value}
-            onChange={field.onChange}
             onBlur={field.onBlur}
+            onChange={field.onChange}
           >
             <Label>Correo electrónico</Label>
             <Input autoComplete="email" placeholder="tu@email.com" />
@@ -91,8 +86,8 @@ export function SignInForm() {
             name={field.name}
             type={showPassword ? "text" : "password"}
             value={field.value}
-            onChange={field.onChange}
             onBlur={field.onBlur}
+            onChange={field.onChange}
           >
             <Label>Contraseña</Label>
             <Input autoComplete="current-password" placeholder="••••••••" />

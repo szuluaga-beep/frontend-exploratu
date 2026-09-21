@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -9,12 +9,11 @@ import { Button, FieldError, Input, Label, Spinner, TextField } from "@heroui/re
 import NextLink from "next/link";
 import { Controller, useForm } from "react-hook-form";
 
-import { signUp, useSession } from "@/lib/auth-client";
+import { signUp } from "@/lib/auth-client";
 import { signUpSchema, type SignUpInput } from "@/lib/schemas/sign-up.schema";
 
 export function SignUpForm() {
   const router = useRouter();
-  const { data: session, isPending } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -32,13 +31,6 @@ export function SignUpForm() {
       confirmPassword: "",
     },
   });
-
-  // Redirigir si ya tiene sesión activa
-  useEffect(() => {
-    if (!isPending && session) {
-      router.push("/dashboard");
-    }
-  }, [session, isPending, router]);
 
   const onSubmit = async (data: SignUpInput) => {
     try {
