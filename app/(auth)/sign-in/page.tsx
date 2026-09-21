@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { Suspense } from "react";
+
 import { AuthCard } from "@/components/auth/auth-card";
 import { SignInForm } from "@/components/auth/sign-in-form";
 
@@ -13,7 +15,9 @@ export default function SignInPage() {
       subtitle="Ingresa tus credenciales para continuar"
       title="Bienvenido de vuelta"
     >
-      <SignInForm />
+      <Suspense>
+        <SignInForm />
+      </Suspense>
     </AuthCard>
   );
 }

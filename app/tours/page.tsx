@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import { auth } from "@/lib/auth";
+import { categoryQueries } from "@/lib/queries/category-queries";
+import { cityQueries } from "@/lib/queries/city-queries";
 import { tourQueries } from "@/lib/queries/tour-queries";
 import { TourList } from "@/components/tours/TourList";
 
@@ -18,8 +20,13 @@ export default async function ToursPage() {
   // Create a fresh QueryClient per request (never shared between users)
   const queryClient = new QueryClient();
 
-  // Fetch tours on the server — result is serialized into the HTML
-  await queryClient.query({ ...tourQueries.list(token), staleTime: "static" });
+  // Prefetch all data needed on this page in parallel
+  // tours (public list) + cities + categories (needed by CreateTourModal)
+  await Promise.all([
+    queryClient.query({ ...tourQueries.list(token), staleTime: "static" }),
+    queryClient.query({ ...cityQueries.list(token), staleTime: "static" }),
+    queryClient.query({ ...categoryQueries.list(token), staleTime: "static" }),
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -30,7 +37,7 @@ export default async function ToursPage() {
         </p>
       </div>
 
-      {/* HydrationBoundary transfers the server-prefetched cache to the client */}
+      {/* HydrationBoundary transfers ALL server-prefetched cache to the client */}
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Suspense
           fallback={

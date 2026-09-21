@@ -1,49 +1,62 @@
 "use client";
 
+import type { Key } from "@heroui/react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import {
+  Autocomplete,
   Button,
+  EmptyState,
   FieldError,
   Input,
   Label,
   ListBox,
+  ListLayout,
   Modal,
   NumberField,
-  Select,
+  SearchField,
   Spinner,
   TextArea,
   TextField,
+  Virtualizer,
+  useFilter,
   useOverlayState,
 } from "@heroui/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-import { createTour } from "@/lib/api/tours";
+import { createTourAction } from "@/app/tours/actions";
 import { categoryQueries } from "@/lib/queries/category-queries";
 import { cityQueries } from "@/lib/queries/city-queries";
-import { tourKeys } from "@/lib/queries/tour-queries";
 import {
   createTourSchema,
   type CreateTourInput,
 } from "@/lib/schemas/tour.schema";
 
-interface CreateTourModalProps {
-  token: string;
-}
-
-export function CreateTourModal({ token }: CreateTourModalProps) {
-  const queryClient = useQueryClient();
+export function CreateTourModal() {
+  const router = useRouter();
   const state = useOverlayState();
+  const { contains } = useFilter({ sensitivity: "base" });
 
-  // Fetch cities — cached after first load, instant on subsequent modal opens
+  // These queries read from the server-prefetched cache — no browser requests
   const { data: cities = [], isLoading: citiesLoading } = useQuery(
-    cityQueries.list(token),
+    cityQueries.list(),
+  );
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery(
+    categoryQueries.list(),
   );
 
-  // Fetch categories — also cached after first load
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery(
-    categoryQueries.list(token),
+  // Controlled search state for each autocomplete
+  const [citySearch, setCitySearch] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
+
+  const filteredCities = cities.filter((c) =>
+    contains(c.name, citySearch),
+  );
+  const filteredCategories = categories.filter((c) =>
+    contains(c.name, categorySearch),
   );
 
   const {
@@ -66,40 +79,26 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
   });
 
   const onSubmit = async (data: CreateTourInput) => {
-    try {
-      await createTour(data, token);
-      await queryClient.invalidateQueries({ queryKey: tourKeys.lists() });
-      reset();
-      state.close();
-    } catch (err) {
-      let message = "No se pudo crear el tour. Intenta de nuevo.";
+    const result = await createTourAction(data);
 
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        const body = err.response?.data as
-          | { message?: string; error?: string }
-          | undefined;
-        const backendMsg = body?.message ?? body?.error;
-
-        if (backendMsg) {
-          message = backendMsg;
-        } else if (status === 401) {
-          message = "No tienes permiso para crear tours. Inicia sesión de nuevo.";
-        } else if (status === 400) {
-          message = "Los datos enviados son inválidos. Revisa el formulario.";
-        } else if (status === 422) {
-          message = "Error de validación en el servidor. Revisa los campos.";
-        } else if (status === 500) {
-          message = "Error interno del servidor. Intenta más tarde.";
-        }
-      }
-
-      setError("root.serverError", { message });
+    if (!result.success) {
+      setError("root.serverError", { message: result.message });
+      return;
     }
+
+    // router.refresh() re-runs the Server Component on the server,
+    // fetching the updated tours list without exposing BACKEND_URL to the client
+    router.refresh();
+    reset();
+    setCitySearch("");
+    setCategorySearch("");
+    state.close();
   };
 
   const handleClose = () => {
     reset();
+    setCitySearch("");
+    setCategorySearch("");
     state.close();
   };
 
@@ -114,8 +113,8 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
         isOpen={state.isOpen}
         onOpenChange={state.setOpen}
       >
-        <Modal.Container size="lg" className="overflow-visible">
-          <Modal.Dialog className="overflow-visible">
+        <Modal.Container size="lg">
+          <Modal.Dialog>
             {() => (
               <>
                 <Modal.CloseTrigger />
@@ -123,7 +122,7 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                   <Modal.Heading>Crear nuevo tour</Modal.Heading>
                 </Modal.Header>
 
-                <Modal.Body className="overflow-visible">
+                <Modal.Body>
                   <form
                     className="flex flex-col gap-4"
                     id="create-tour-form"
@@ -232,7 +231,7 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                       />
                     </div>
 
-                    {/* Max Capacity (full width) */}
+                    {/* Max Capacity */}
                     <Controller
                       control={control}
                       name="maxCapacity"
@@ -258,95 +257,149 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                       )}
                     />
 
-                    {/* Category + City selects */}
+                    {/* Category + City — Autocomplete with virtualization */}
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Category — populated from /api/categories */}
+                      {/* Category */}
                       <Controller
                         control={control}
                         name="categoryId"
                         render={({ field, fieldState }) => (
-                          <Select
+                          <Autocomplete
+                            allowsEmptyCollection
                             fullWidth
                             isDisabled={categoriesLoading}
                             isInvalid={!!fieldState.error}
-                            value={field.value ? String(field.value) : null}
                             placeholder={
-                              categoriesLoading
-                                ? "Cargando..."
-                                : "Selecciona una categoría"
+                              categoriesLoading ? "Cargando..." : "Categoría"
                             }
-                            onChange={(key) =>
-                              field.onChange(key ? Number(key) : undefined)
+                            selectionMode="single"
+                            value={field.value ? String(field.value) : null}
+                            onChange={(key: Key | Key[] | null) =>
+                              field.onChange(key ? Number(key as Key) : undefined)
                             }
                           >
                             <Label>Categoría</Label>
-                            <Select.Trigger>
-                              <Select.Value />
-                              <Select.Indicator />
-                            </Select.Trigger>
-                            <Select.Popover>
-                              <ListBox>
-                                {categories.map((cat) => (
-                                  <ListBox.Item
-                                    key={cat.id}
-                                    id={String(cat.id)}
-                                    textValue={cat.name}
-                                  >
-                                    {cat.name}
-                                    <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                ))}
-                              </ListBox>
-                            </Select.Popover>
+                            <Autocomplete.Trigger>
+                              <Autocomplete.Value />
+                              <Autocomplete.ClearButton />
+                              <Autocomplete.Indicator />
+                            </Autocomplete.Trigger>
                             {fieldState.error && (
                               <FieldError>{fieldState.error.message}</FieldError>
                             )}
-                          </Select>
+                            <Autocomplete.Popover>
+                              <Autocomplete.Filter
+                                inputValue={categorySearch}
+                                onInputChange={setCategorySearch}
+                              >
+                                <SearchField
+                                  autoFocus
+                                  aria-label="Buscar categoría"
+                                  name="category-search"
+                                  variant="secondary"
+                                >
+                                  <SearchField.Group>
+                                    <SearchField.SearchIcon />
+                                    <SearchField.Input placeholder="Buscar..." />
+                                    <SearchField.ClearButton />
+                                  </SearchField.Group>
+                                </SearchField>
+                                <Virtualizer
+                                  layout={ListLayout}
+                                  layoutOptions={{ rowHeight: 36 }}
+                                >
+                                  <ListBox
+                                    items={filteredCategories}
+                                    renderEmptyState={() => (
+                                      <EmptyState>Sin resultados</EmptyState>
+                                    )}
+                                  >
+                                    {(cat) => (
+                                      <ListBox.Item
+                                        id={String(cat.id)}
+                                        textValue={cat.name}
+                                      >
+                                        {cat.name}
+                                        <ListBox.ItemIndicator />
+                                      </ListBox.Item>
+                                    )}
+                                  </ListBox>
+                                </Virtualizer>
+                              </Autocomplete.Filter>
+                            </Autocomplete.Popover>
+                          </Autocomplete>
                         )}
                       />
 
-                      {/* City — populated from /api/cities */}
+                      {/* City */}
                       <Controller
                         control={control}
                         name="cityId"
                         render={({ field, fieldState }) => (
-                          <Select
+                          <Autocomplete
+                            allowsEmptyCollection
                             fullWidth
                             isDisabled={citiesLoading}
                             isInvalid={!!fieldState.error}
-                            value={field.value ? String(field.value) : null}
                             placeholder={
-                              citiesLoading
-                                ? "Cargando..."
-                                : "Selecciona una ciudad"
+                              citiesLoading ? "Cargando..." : "Ciudad"
                             }
-                            onChange={(key) =>
-                              field.onChange(key ? Number(key) : undefined)
+                            selectionMode="single"
+                            value={field.value ? String(field.value) : null}
+                            onChange={(key: Key | Key[] | null) =>
+                              field.onChange(key ? Number(key as Key) : undefined)
                             }
                           >
                             <Label>Ciudad</Label>
-                            <Select.Trigger>
-                              <Select.Value />
-                              <Select.Indicator />
-                            </Select.Trigger>
-                            <Select.Popover>
-                              <ListBox>
-                                {cities.map((city) => (
-                                  <ListBox.Item
-                                    key={city.id}
-                                    id={String(city.id)}
-                                    textValue={city.name}
-                                  >
-                                    {city.name}
-                                    <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                ))}
-                              </ListBox>
-                            </Select.Popover>
+                            <Autocomplete.Trigger>
+                              <Autocomplete.Value />
+                              <Autocomplete.ClearButton />
+                              <Autocomplete.Indicator />
+                            </Autocomplete.Trigger>
                             {fieldState.error && (
                               <FieldError>{fieldState.error.message}</FieldError>
                             )}
-                          </Select>
+                            <Autocomplete.Popover>
+                              <Autocomplete.Filter
+                                inputValue={citySearch}
+                                onInputChange={setCitySearch}
+                              >
+                                <SearchField
+                                  autoFocus
+                                  aria-label="Buscar ciudad"
+                                  name="city-search"
+                                  variant="secondary"
+                                >
+                                  <SearchField.Group>
+                                    <SearchField.SearchIcon />
+                                    <SearchField.Input placeholder="Buscar..." />
+                                    <SearchField.ClearButton />
+                                  </SearchField.Group>
+                                </SearchField>
+                                <Virtualizer
+                                  layout={ListLayout}
+                                  layoutOptions={{ rowHeight: 36 }}
+                                >
+                                  <ListBox
+                                    items={filteredCities}
+                                    renderEmptyState={() => (
+                                      <EmptyState>Sin resultados</EmptyState>
+                                    )}
+                                  >
+                                    {(city) => (
+                                      <ListBox.Item
+                                        id={String(city.id)}
+                                        textValue={city.name}
+                                      >
+                                        {city.name}
+                                        <ListBox.ItemIndicator />
+                                      </ListBox.Item>
+                                    )}
+                                  </ListBox>
+                                </Virtualizer>
+                              </Autocomplete.Filter>
+                            </Autocomplete.Popover>
+                          </Autocomplete>
                         )}
                       />
                     </div>

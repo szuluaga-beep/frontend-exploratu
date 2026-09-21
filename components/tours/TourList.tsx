@@ -19,17 +19,20 @@ export function TourList({ token, isAuthenticated = false }: TourListProps) {
       {/* Header row: count + create button (authenticated only) */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-foreground/50">
-          {tours.length} {tours.length === 1 ? "tour disponible" : "tours disponibles"}
+          {tours.length}{" "}
+          {tours.length === 1 ? "tour disponible" : "tours disponibles"}
         </p>
 
-        {isAuthenticated && token && <CreateTourModal token={token} />}
+        {isAuthenticated && token && <CreateTourModal />}
       </div>
 
       {/* Tour grid or empty state */}
       {tours.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-2xl mb-2">🗺️</p>
-          <p className="text-foreground/60">No hay tours disponibles por el momento.</p>
+          <p className="text-foreground/60">
+            No hay tours disponibles por el momento.
+          </p>
           <p className="text-sm text-foreground/40 mt-1">¡Vuelve pronto!</p>
         </div>
       ) : (
