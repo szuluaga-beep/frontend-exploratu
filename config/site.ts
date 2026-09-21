@@ -1,8 +1,9 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Next.js + HeroUI",
-  description: "Make beautiful websites regardless of your design experience.",
+  name: "Exploratú",
+  description:
+    "Exploratú es la plataforma para descubrir y reservar tours únicos. Encuentra experiencias locales, aventuras culturales y recorridos guiados en los mejores destinos.",
   navItems: [
     {
       label: "Home",
@@ -24,8 +25,16 @@ export const siteConfig = {
       label: "About",
       href: "/about",
     },
+    {
+      label: "Tours",
+      href: "/tours",
+    },
   ],
   navMenuItems: [
+    {
+      label: "Tours",
+      href: "/tours",
+    },
     {
       label: "Profile",
       href: "/profile",

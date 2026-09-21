@@ -8,6 +8,7 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: z.string(),
     NODE_ENV: z.enum(["development", "production"]),
     BETTER_AUTH_URL: z.url(),
+    BACKEND_URL: z.url(),
   },
   client: {
     // Add client-side environment variables here
