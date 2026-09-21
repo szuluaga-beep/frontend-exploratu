@@ -7,17 +7,21 @@ import {
   FieldError,
   Input,
   Label,
+  ListBox,
   Modal,
   NumberField,
+  Select,
   Spinner,
   TextArea,
   TextField,
   useOverlayState,
 } from "@heroui/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 
 import { createTour } from "@/lib/api/tours";
+import { categoryQueries } from "@/lib/queries/category-queries";
+import { cityQueries } from "@/lib/queries/city-queries";
 import { tourKeys } from "@/lib/queries/tour-queries";
 import {
   createTourSchema,
@@ -31,6 +35,16 @@ interface CreateTourModalProps {
 export function CreateTourModal({ token }: CreateTourModalProps) {
   const queryClient = useQueryClient();
   const state = useOverlayState();
+
+  // Fetch cities — cached after first load, instant on subsequent modal opens
+  const { data: cities = [], isLoading: citiesLoading } = useQuery(
+    cityQueries.list(token),
+  );
+
+  // Fetch categories — also cached after first load
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery(
+    categoryQueries.list(token),
+  );
 
   const {
     control,
@@ -46,31 +60,25 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
       durationMinutes: 60,
       pricePerPerson: 0,
       maxCapacity: 10,
-      categoryId: 1,
-      cityId: 1,
+      categoryId: undefined as unknown as number,
+      cityId: undefined as unknown as number,
     },
   });
 
   const onSubmit = async (data: CreateTourInput) => {
     try {
       await createTour(data, token);
-
-      // Invalidate tours list so it refetches with the new tour
       await queryClient.invalidateQueries({ queryKey: tourKeys.lists() });
-
       reset();
       state.close();
     } catch (err) {
-      // Extract the real error message from the backend response
       let message = "No se pudo crear el tour. Intenta de nuevo.";
 
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
-        // Backend may return { message: "..." } or { error: "..." }
         const body = err.response?.data as
           | { message?: string; error?: string }
           | undefined;
-
         const backendMsg = body?.message ?? body?.error;
 
         if (backendMsg) {
@@ -106,8 +114,8 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
         isOpen={state.isOpen}
         onOpenChange={state.setOpen}
       >
-        <Modal.Container size="lg">
-          <Modal.Dialog>
+        <Modal.Container size="lg" className="overflow-visible">
+          <Modal.Dialog className="overflow-visible">
             {() => (
               <>
                 <Modal.CloseTrigger />
@@ -115,7 +123,7 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                   <Modal.Heading>Crear nuevo tour</Modal.Heading>
                 </Modal.Header>
 
-                <Modal.Body>
+                <Modal.Body className="overflow-visible">
                   <form
                     className="flex flex-col gap-4"
                     id="create-tour-form"
@@ -166,8 +174,8 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                       )}
                     />
 
+                    {/* Duration + Price */}
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Duration */}
                       <Controller
                         control={control}
                         name="durationMinutes"
@@ -194,7 +202,6 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                         )}
                       />
 
-                      {/* Price */}
                       <Controller
                         control={control}
                         name="pricePerPerson"
@@ -225,80 +232,121 @@ export function CreateTourModal({ token }: CreateTourModalProps) {
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                      {/* Max Capacity */}
-                      <Controller
-                        control={control}
-                        name="maxCapacity"
-                        render={({ field, fieldState }) => (
-                          <NumberField
-                            isInvalid={!!fieldState.error}
-                            minValue={1}
-                            maxValue={500}
-                            name={field.name}
-                            value={field.value}
-                            onChange={field.onChange}
-                          >
-                            <Label>Capacidad máx.</Label>
-                            <NumberField.Group>
-                              <NumberField.DecrementButton />
-                              <NumberField.Input className="w-full" />
-                              <NumberField.IncrementButton />
-                            </NumberField.Group>
-                            {fieldState.error && (
-                              <FieldError>{fieldState.error.message}</FieldError>
-                            )}
-                          </NumberField>
-                        )}
-                      />
+                    {/* Max Capacity (full width) */}
+                    <Controller
+                      control={control}
+                      name="maxCapacity"
+                      render={({ field, fieldState }) => (
+                        <NumberField
+                          isInvalid={!!fieldState.error}
+                          minValue={1}
+                          maxValue={500}
+                          name={field.name}
+                          value={field.value}
+                          onChange={field.onChange}
+                        >
+                          <Label>Capacidad máxima</Label>
+                          <NumberField.Group>
+                            <NumberField.DecrementButton />
+                            <NumberField.Input className="w-32" />
+                            <NumberField.IncrementButton />
+                          </NumberField.Group>
+                          {fieldState.error && (
+                            <FieldError>{fieldState.error.message}</FieldError>
+                          )}
+                        </NumberField>
+                      )}
+                    />
 
-                      {/* Category ID */}
+                    {/* Category + City selects */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Category — populated from /api/categories */}
                       <Controller
                         control={control}
                         name="categoryId"
                         render={({ field, fieldState }) => (
-                          <NumberField
+                          <Select
+                            fullWidth
+                            isDisabled={categoriesLoading}
                             isInvalid={!!fieldState.error}
-                            minValue={1}
-                            name={field.name}
-                            value={field.value}
-                            onChange={field.onChange}
+                            value={field.value ? String(field.value) : null}
+                            placeholder={
+                              categoriesLoading
+                                ? "Cargando..."
+                                : "Selecciona una categoría"
+                            }
+                            onChange={(key) =>
+                              field.onChange(key ? Number(key) : undefined)
+                            }
                           >
-                            <Label>ID Categoría</Label>
-                            <NumberField.Group>
-                              <NumberField.DecrementButton />
-                              <NumberField.Input className="w-full" />
-                              <NumberField.IncrementButton />
-                            </NumberField.Group>
+                            <Label>Categoría</Label>
+                            <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                            </Select.Trigger>
+                            <Select.Popover>
+                              <ListBox>
+                                {categories.map((cat) => (
+                                  <ListBox.Item
+                                    key={cat.id}
+                                    id={String(cat.id)}
+                                    textValue={cat.name}
+                                  >
+                                    {cat.name}
+                                    <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                ))}
+                              </ListBox>
+                            </Select.Popover>
                             {fieldState.error && (
                               <FieldError>{fieldState.error.message}</FieldError>
                             )}
-                          </NumberField>
+                          </Select>
                         )}
                       />
 
-                      {/* City ID */}
+                      {/* City — populated from /api/cities */}
                       <Controller
                         control={control}
                         name="cityId"
                         render={({ field, fieldState }) => (
-                          <NumberField
+                          <Select
+                            fullWidth
+                            isDisabled={citiesLoading}
                             isInvalid={!!fieldState.error}
-                            minValue={1}
-                            name={field.name}
-                            value={field.value}
-                            onChange={field.onChange}
+                            value={field.value ? String(field.value) : null}
+                            placeholder={
+                              citiesLoading
+                                ? "Cargando..."
+                                : "Selecciona una ciudad"
+                            }
+                            onChange={(key) =>
+                              field.onChange(key ? Number(key) : undefined)
+                            }
                           >
-                            <Label>ID Ciudad</Label>
-                            <NumberField.Group>
-                              <NumberField.DecrementButton />
-                              <NumberField.Input className="w-full" />
-                              <NumberField.IncrementButton />
-                            </NumberField.Group>
+                            <Label>Ciudad</Label>
+                            <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                            </Select.Trigger>
+                            <Select.Popover>
+                              <ListBox>
+                                {cities.map((city) => (
+                                  <ListBox.Item
+                                    key={city.id}
+                                    id={String(city.id)}
+                                    textValue={city.name}
+                                  >
+                                    {city.name}
+                                    <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                ))}
+                              </ListBox>
+                            </Select.Popover>
                             {fieldState.error && (
                               <FieldError>{fieldState.error.message}</FieldError>
                             )}
-                          </NumberField>
+                          </Select>
                         )}
                       />
                     </div>
