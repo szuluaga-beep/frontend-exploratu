@@ -11,10 +11,7 @@ import clsx from "clsx";
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
 import {
-  TwitterIcon,
   GithubIcon,
-  DiscordIcon,
-  SearchIcon,
   Logo,
 } from "@/components/icons";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -23,23 +20,6 @@ export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
-
-  const searchInput = (
-    <TextField aria-label="Search" type="search">
-      <InputGroup>
-        <InputGroup.Prefix>
-          <SearchIcon className="text-base text-muted pointer-events-none flex-shrink-0" />
-        </InputGroup.Prefix>
-        <InputGroup.Input className="text-sm" placeholder="Search..." />
-        <InputGroup.Suffix>
-          <Kbd className="hidden lg:inline-flex">
-            <Kbd.Abbr keyValue="command" />
-            <Kbd.Content>K</Kbd.Content>
-          </Kbd>
-        </InputGroup.Suffix>
-      </InputGroup>
-    </TextField>
-  );
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-separator bg-background/70 backdrop-blur-lg">
@@ -68,7 +48,6 @@ export const Navbar = () => {
 
         <div className="hidden sm:flex items-center gap-2">
           <ThemeSwitch />
-          <div className="hidden lg:flex">{searchInput}</div>
           <div className="hidden md:flex gap-2">
             {session ? (
               <>
@@ -151,7 +130,6 @@ export const Navbar = () => {
 
       {isMenuOpen && (
         <div className="border-t border-separator sm:hidden">
-          <div className="p-4">{searchInput}</div>
           <ul className="flex flex-col gap-2 px-4 pb-4">
             {siteConfig.navMenuItems.map((item, index) => (
               <li key={`${item.label}-${index}`}>
