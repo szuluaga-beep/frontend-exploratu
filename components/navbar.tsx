@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
+import { useRouter } from "next/navigation";
+
 import { Button, Kbd, Link, TextField, InputGroup } from "@heroui/react";
 import NextLink from "next/link";
 import clsx from "clsx";
@@ -11,13 +14,15 @@ import {
   TwitterIcon,
   GithubIcon,
   DiscordIcon,
-  HeartFilledIcon,
   SearchIcon,
   Logo,
 } from "@/components/icons";
+import { signOut, useSession } from "@/lib/auth-client";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session } = useSession();
+  const router = useRouter();
 
   const searchInput = (
     <TextField aria-label="Search" type="search">
@@ -62,41 +67,43 @@ export const Navbar = () => {
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
-          <Link
-            aria-label="Twitter"
-            href={siteConfig.links.twitter}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <TwitterIcon className="text-muted" />
-          </Link>
-          <Link
-            aria-label="Discord"
-            href={siteConfig.links.discord}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <DiscordIcon className="text-muted" />
-          </Link>
-          <Link
-            aria-label="Github"
-            href={siteConfig.links.github}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <GithubIcon className="text-muted" />
-          </Link>
           <ThemeSwitch />
           <div className="hidden lg:flex">{searchInput}</div>
-          <div className="hidden md:flex">
-            <Button
-              className="text-sm font-normal"
-              variant="tertiary"
-              onPress={() => window.open(siteConfig.links.sponsor, "_blank")}
-            >
-              <HeartFilledIcon className="text-danger" />
-              Sponsor
-            </Button>
+          <div className="hidden md:flex gap-2">
+            {session ? (
+              <>
+                <span className="text-sm text-muted self-center hidden lg:block">
+                  {session.user.name}
+                </span>
+                <Button
+                  className="text-sm font-normal"
+                  variant="tertiary"
+                  onPress={() =>
+                    signOut().then(() => {
+                      router.push("/");
+                    })
+                  }
+                >
+                  Cerrar sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="text-sm font-normal"
+                  variant="tertiary"
+                  onPress={() => router.push("/sign-in")}
+                >
+                  Iniciar sesión
+                </Button>
+                <Button
+                  className="text-sm font-normal"
+                  onPress={() => router.push("/sign-up")}
+                >
+                  Registrarse
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
