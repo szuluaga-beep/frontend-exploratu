@@ -7,20 +7,18 @@ import { tourQueries } from "@/lib/queries/tour-queries";
 import { TourList } from "@/components/tours/TourList";
 
 export default async function ToursPage() {
-  // Get the current session (token is used for backend auth validations)
+  // Get the current session — determines auth status and provides Bearer token
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   const token = session?.session?.token;
-
-  console.log(token)
+  const isAuthenticated = !!session?.user;
 
   // Create a fresh QueryClient per request (never shared between users)
   const queryClient = new QueryClient();
 
-  // queryClient.query() with staleTime: 'static' is the v5 recommended SSR API
-  // 'static' means: treat server-fetched data as always fresh — no refetch on hydration
+  // Fetch tours on the server — result is serialized into the HTML
   await queryClient.query({ ...tourQueries.list(token), staleTime: "static" });
 
   return (
@@ -28,7 +26,7 @@ export default async function ToursPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Tours</h1>
         <p className="text-foreground/60 mt-1">
-          Explore our available tours and experiences.
+          Explora nuestros tours y experiencias disponibles.
         </p>
       </div>
 
@@ -46,7 +44,7 @@ export default async function ToursPage() {
             </div>
           }
         >
-          <TourList token={token} />
+          <TourList isAuthenticated={isAuthenticated} token={token} />
         </Suspense>
       </HydrationBoundary>
     </div>
